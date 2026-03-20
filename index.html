@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SYNTHCALC</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #07050f;
+    --panel:     #0d0a1a;
+    --casing:    #110e22;
+    --border:    #2a1f4a;
+    --pink:      #ff2d78;
+    --cyan:      #00ffe7;
+    --yellow:    #ffe600;
+    --purple:    #9b5de5;
+    --display-bg:#050310;
+    --btn-base:  #160f2e;
+    --btn-hover: #1f1545;
+    --text:      #e8e0ff;
+    --muted:     #4a3a6a;
+    --glow-pink: 0 0 12px rgba(255,45,120,0.7), 0 0 30px rgba(255,45,120,0.3);
+    --glow-cyan: 0 0 12px rgba(0,255,231,0.7), 0 0 30px rgba(0,255,231,0.3);
+    --glow-yel:  0 0 12px rgba(255,230,0,0.7),  0 0 30px rgba(255,230,0,0.25);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Share Tech Mono', monospace;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Synthwave grid floor */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      linear-gradient(180deg, transparent 50%, rgba(155,93,229,0.04) 100%),
+      linear-gradient(rgba(0,255,231,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,231,0.03) 1px, transparent 1px);
+    background-size: 100% 100%, 44px 44px, 44px 44px;
+    pointer-events: none;
+  }
+
+  /* Horizon glow */
+  body::after {
+    content: '';
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 260px;
+    background: linear-gradient(to top, rgba(155,93,229,0.12), transparent);
+    pointer-events: none;
+  }
+
+  /* Floating orbs */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+    animation: pulse 6s ease-in-out infinite alternate;
+  }
+  .orb1 { width:300px;height:300px;background:rgba(255,45,120,0.10);top:-80px;right:-60px;animation-delay:0s; }
+  .orb2 { width:260px;height:260px;background:rgba(0,255,231,0.08);bottom:-60px;left:-60px;animation-delay:-3s; }
+  @keyframes pulse { from{opacity:0.6;transform:scale(1)} to{opacity:1;transform:scale(1.15)} }
+
+  /* Calculator shell */
+  .calc-shell {
+    position: relative;
+    background: linear-gradient(160deg, #1a1233 0%, #0d0a1a 60%, #110e22 100%);
+    border: 1px solid var(--border);
+    border-radius: 28px;
+    padding: 32px 28px 28px;
+    width: 340px;
+    box-shadow:
+      0 0 0 1px rgba(155,93,229,0.15),
+      0 30px 80px rgba(0,0,0,0.8),
+      inset 0 1px 0 rgba(255,255,255,0.06);
+    animation: shellIn 0.7s cubic-bezier(0.34,1.4,0.64,1) both;
+  }
+  @keyframes shellIn {
+    from { opacity:0; transform:translateY(40px) scale(0.92); }
+    to   { opacity:1; transform:translateY(0)    scale(1); }
+  }
+
+  /* Top stripe accent */
+  .calc-shell::before {
+    content:'';
+    position:absolute;
+    top:0; left:40px; right:40px; height:2px;
+    border-radius:0 0 4px 4px;
+    background: linear-gradient(90deg, var(--pink), var(--cyan), var(--purple));
+    box-shadow: var(--glow-cyan);
+  }
+
+  /* Brand bar */
+  .brand {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+  }
+  .brand-name {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 5px;
+    color: var(--cyan);
+    text-shadow: var(--glow-cyan);
+  }
+  .brand-dots {
+    display: flex; gap: 5px;
+  }
+  .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    animation: blink 2.4s ease-in-out infinite;
+  }
+  .dot:nth-child(1){ background:var(--pink); animation-delay:0s; box-shadow:var(--glow-pink); }
+  .dot:nth-child(2){ background:var(--yellow); animation-delay:0.4s; box-shadow:var(--glow-yel); }
+  .dot:nth-child(3){ background:var(--cyan); animation-delay:0.8s; box-shadow:var(--glow-cyan); }
+  @keyframes blink {
+    0%,100%{opacity:1} 50%{opacity:0.2}
+  }
+
+  /* Display */
+  .display {
+    background: var(--display-bg);
+    border: 1px solid rgba(0,255,231,0.15);
+    border-radius: 14px;
+    padding: 16px 20px 14px;
+    margin-bottom: 22px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 2px 12px rgba(0,0,0,0.6), 0 0 20px rgba(0,255,231,0.05);
+  }
+  /* Scanlines */
+  .display::after {
+    content:'';
+    position:absolute;
+    inset:0;
+    background: repeating-linear-gradient(
+      0deg, transparent, transparent 3px,
+      rgba(0,255,231,0.015) 3px, rgba(0,255,231,0.015) 4px
+    );
+    pointer-events:none;
+  }
+
+  .display-expression {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    min-height: 16px;
+    text-align: right;
+    margin-bottom: 8px;
+    word-break: break-all;
+    transition: color 0.2s;
+  }
+  .display-main {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(28px, 8vw, 40px);
+    color: var(--cyan);
+    text-align: right;
+    letter-spacing: 2px;
+    word-break: break-all;
+    line-height: 1.1;
+    text-shadow: var(--glow-cyan);
+    transition: all 0.15s;
+    min-height: 48px;
+  }
+  .display-main.error { color: var(--pink); text-shadow: var(--glow-pink); font-size: 20px; }
+  .display-main.flash { animation: displayFlash 0.2s ease; }
+  @keyframes displayFlash {
+    0%   { opacity:1; }
+    30%  { opacity:0.3; }
+    100% { opacity:1; }
+  }
+
+  /* Button grid */
+  .btn-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+
+  /* Buttons */
+  .btn {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0;
+    height: 58px;
+    font-family: 'Orbitron', monospace;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.1s, box-shadow 0.1s, background 0.15s;
+    user-select: none;
+    overflow: hidden;
+    background: var(--btn-base);
+    color: var(--text);
+    letter-spacing: 1px;
+  }
+
+  /* Glossy top sheen */
+  .btn::before {
+    content:'';
+    position:absolute;
+    top:0; left:0; right:0; height:50%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 100%);
+    border-radius: 12px 12px 0 0;
+    pointer-events:none;
+  }
+
+  /* Ripple */
+  .btn::after {
+    content:'';
+    position:absolute;
+    inset:0;
+    background: radial-gradient(circle at var(--rx,50%) var(--ry,50%), rgba(255,255,255,0.18) 0%, transparent 60%);
+    opacity:0;
+    transition: opacity 0.4s;
+    pointer-events:none;
+  }
+  .btn.rippling::after { opacity:1; transition:opacity 0s; }
+
+  .btn:hover {
+    background: var(--btn-hover);
+    transform: translateY(-2px);
+    border-color: rgba(155,93,229,0.4);
+  }
+  .btn:active, .btn.pressed {
+    transform: translateY(1px) scale(0.97);
+    box-shadow: none !important;
+  }
+
+  /* Number buttons */
+  .btn-num { color: #d0c8f0; }
+  .btn-num:hover { border-color: rgba(155,93,229,0.5); box-shadow: 0 4px 16px rgba(155,93,229,0.15); }
+
+  /* Operator buttons */
+  .btn-op {
+    color: var(--cyan);
+    border-color: rgba(0,255,231,0.2);
+    background: #081420;
+  }
+  .btn-op:hover {
+    box-shadow: var(--glow-cyan);
+    border-color: var(--cyan);
+    background: #0a1c28;
+  }
+
+  /* Equals */
+  .btn-eq {
+    background: linear-gradient(135deg, #c0136b, #ff2d78);
+    color: white;
+    border-color: var(--pink);
+    box-shadow: 0 4px 20px rgba(255,45,120,0.3);
+    font-size: 20px;
+  }
+  .btn-eq:hover {
+    box-shadow: var(--glow-pink), 0 6px 24px rgba(255,45,120,0.4);
+    transform: translateY(-3px);
+  }
+
+  /* Clear */
+  .btn-clear {
+    color: var(--yellow);
+    border-color: rgba(255,230,0,0.2);
+    background: #131000;
+  }
+  .btn-clear:hover {
+    box-shadow: var(--glow-yel);
+    border-color: var(--yellow);
+    background: #1a1600;
+  }
+
+  /* Special */
+  .btn-special {
+    color: #b8a8f0;
+    border-color: rgba(155,93,229,0.25);
+    background: #100c22;
+    font-size: 13px;
+  }
+  .btn-special:hover {
+    box-shadow: 0 0 14px rgba(155,93,229,0.35);
+    border-color: var(--purple);
+  }
+
+  /* Wide button */
+  .btn-wide { grid-column: span 2; }
+
+  /* History panel */
+  .history-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 8px 0 0;
+    border-top: 1px solid rgba(255,255,255,0.04);
+    transition: color 0.2s;
+    user-select: none;
+  }
+  .history-toggle:hover { color: var(--cyan); }
+  .history-toggle .arrow { transition: transform 0.3s; }
+  .history-toggle.open .arrow { transform: rotate(180deg); }
+
+  .history-list {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease;
+  }
+  .history-list.open { max-height: 160px; }
+  .history-inner {
+    padding-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 150px;
+    overflow-y: auto;
+  }
+  .history-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--muted);
+    padding: 4px 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .history-item:hover { background: rgba(0,255,231,0.05); color: var(--cyan); }
+  .history-item .h-expr { flex:1; }
+  .history-item .h-result { color: var(--text); font-weight: bold; margin-left: 10px; }
+  .history-empty { font-size: 11px; color: var(--muted); text-align: center; padding: 10px 0; letter-spacing: 1px; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<div class="calc-shell">
+  <div class="brand">
+    <span class="brand-name">SYNTHCALC</span>
+    <div class="brand-dots">
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+    </div>
+  </div>
+
+  <div class="display">
+    <div class="display-expression" id="expression"></div>
+    <div class="display-main" id="display">0</div>
+  </div>
+
+  <div class="btn-grid" id="btn-grid">
+    <!-- Row 1 -->
+    <button class="btn btn-clear btn-special" data-action="clear">AC</button>
+    <button class="btn btn-special" data-action="sign">+/−</button>
+    <button class="btn btn-special" data-action="percent">%</button>
+    <button class="btn btn-op" data-action="op" data-value="÷">÷</button>
+    <!-- Row 2 -->
+    <button class="btn btn-num" data-action="num" data-value="7">7</button>
+    <button class="btn btn-num" data-action="num" data-value="8">8</button>
+    <button class="btn btn-num" data-action="num" data-value="9">9</button>
+    <button class="btn btn-op" data-action="op" data-value="×">×</button>
+    <!-- Row 3 -->
+    <button class="btn btn-num" data-action="num" data-value="4">4</button>
+    <button class="btn btn-num" data-action="num" data-value="5">5</button>
+    <button class="btn btn-num" data-action="num" data-value="6">6</button>
+    <button class="btn btn-op" data-action="op" data-value="−">−</button>
+    <!-- Row 4 -->
+    <button class="btn btn-num" data-action="num" data-value="1">1</button>
+    <button class="btn btn-num" data-action="num" data-value="2">2</button>
+    <button class="btn btn-num" data-action="num" data-value="3">3</button>
+    <button class="btn btn-op" data-action="op" data-value="+">+</button>
+    <!-- Row 5 -->
+    <button class="btn btn-num btn-wide" data-action="num" data-value="0">0</button>
+    <button class="btn btn-num" data-action="decimal">.</button>
+    <button class="btn btn-eq" data-action="equals">=</button>
+  </div>
+
+  <div class="history-toggle" id="history-toggle">
+    <span>▾</span>
+    <span class="arrow">▴</span>
+    <span>HISTORY</span>
+  </div>
+  <div class="history-list" id="history-list">
+    <div class="history-inner" id="history-inner">
+      <div class="history-empty" id="history-empty">No calculations yet</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // State
+  let current    = '0';
+  let previous   = null;
+  let operator   = null;
+  let freshResult = false;
+  let history    = [];
+
+  const display    = document.getElementById('display');
+  const expression = document.getElementById('expression');
+  const histInner  = document.getElementById('history-inner');
+  const histEmpty  = document.getElementById('history-empty');
+  const histToggle = document.getElementById('history-toggle');
+  const histList   = document.getElementById('history-list');
+
+  // Op map
+  const opMap = { '÷': '/', '×': '*', '−': '-', '+': '+' };
+
+  function updateDisplay(val) {
+    let s = String(val);
+    // Format large numbers with commas
+    if (!isNaN(val) && !s.includes('e')) {
+      const parts = s.split('.');
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      s = parts.join('.');
+    }
+    display.textContent = s;
+    display.classList.remove('error');
+    if (s.length > 12) display.style.fontSize = '22px';
+    else if (s.length > 8) display.style.fontSize = '30px';
+    else display.style.fontSize = '';
+  }
+
+  function flash() {
+    display.classList.remove('flash');
+    void display.offsetWidth;
+    display.classList.add('flash');
+  }
+
+  function appendHistory(expr, result) {
+    history.unshift({ expr, result });
+    if (history.length > 20) history.pop();
+    renderHistory();
+  }
+
+  function renderHistory() {
+    histEmpty.style.display = history.length ? 'none' : 'block';
+    const existing = histInner.querySelectorAll('.history-item');
+    existing.forEach(e => e.remove());
+    history.forEach(h => {
+      const item = document.createElement('div');
+      item.className = 'history-item';
+      item.innerHTML = `<span class="h-expr">${h.expr}</span><span class="h-result">${h.result}</span>`;
+      item.addEventListener('click', () => {
+        current = String(h.result).replace(/,/g,'');
+        freshResult = true;
+        operator = null;
+        previous = null;
+        expression.textContent = '';
+        updateDisplay(current);
+      });
+      histInner.appendChild(item);
+    });
+  }
+
+  // Calculator logic
+  function handleNum(val) {
+    if (freshResult) { current = val; freshResult = false; }
+    else if (current === '0') current = val;
+    else if (current.replace('-','').length < 12) current += val;
+    updateDisplay(current);
+  }
+
+  function handleDecimal() {
+    if (freshResult) { current = '0.'; freshResult = false; }
+    else if (!current.includes('.')) current += '.';
+    updateDisplay(current);
+  }
+
+  function handleOp(op) {
+    if (operator && !freshResult) calculate(false);
+    previous = parseFloat(current.replace(/,/g,''));
+    operator = op;
+    freshResult = true;
+    expression.textContent = `${current} ${op}`;
+  }
+
+  function calculate(addHistory = true) {
+    if (operator === null || previous === null) return;
+    const a = previous;
+    const b = parseFloat(current.replace(/,/g,''));
+    let result;
+    switch (operator) {
+      case '÷': result = b === 0 ? 'ERROR: DIV/0' : a / b; break;
+      case '×': result = a * b; break;
+      case '−': result = a - b; break;
+      case '+': result = a + b; break;
+      default: return;
+    }
+    const expr = `${expression.textContent} ${current}`;
+    if (typeof result === 'string') {
+      display.textContent = result;
+      display.classList.add('error');
+      current = '0'; operator = null; previous = null; freshResult = false;
+      expression.textContent = '';
+      return;
+    }
+    // Precision fix
+    result = parseFloat(result.toPrecision(12));
+    if (addHistory) appendHistory(expr, result);
+    current = String(result);
+    operator = null;
+    previous = null;
+    freshResult = true;
+    expression.textContent = expr + ' =';
+    flash();
+    updateDisplay(result);
+  }
+
+  function handleClear() {
+    current = '0'; previous = null; operator = null; freshResult = false;
+    expression.textContent = '';
+    updateDisplay('0');
+  }
+
+  function handleSign() {
+    if (current === '0') return;
+    current = String(parseFloat(current.replace(/,/g,'')) * -1);
+    updateDisplay(current);
+  }
+
+  function handlePercent() {
+    const val = parseFloat(current.replace(/,/g,''));
+    if (previous !== null && operator) {
+      current = String((previous * val) / 100);
+    } else {
+      current = String(val / 100);
+    }
+    updateDisplay(current);
+  }
+
+  // Button click handler
+  document.getElementById('btn-grid').addEventListener('click', e => {
+    const btn = e.target.closest('.btn');
+    if (!btn) return;
+    const { action, value } = btn.dataset;
+
+    // Ripple
+    const rect = btn.getBoundingClientRect();
+    btn.style.setProperty('--rx', ((e.clientX - rect.left) / rect.width * 100) + '%');
+    btn.style.setProperty('--ry', ((e.clientY - rect.top) / rect.height * 100) + '%');
+    btn.classList.add('rippling', 'pressed');
+    setTimeout(() => btn.classList.remove('rippling', 'pressed'), 300);
+
+    switch (action) {
+      case 'num':     handleNum(value); break;
+      case 'decimal': handleDecimal(); break;
+      case 'op':      handleOp(value); break;
+      case 'equals':  calculate(); break;
+      case 'clear':   handleClear(); break;
+      case 'sign':    handleSign(); break;
+      case 'percent': handlePercent(); break;
+    }
+  });
+
+  // Keyboard support
+  document.addEventListener('keydown', e => {
+    const numMap = {'0':'0','1':'1','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9'};
+    const opKeyMap = {'/':'÷','*':'×','-':'−','+':'+'};
+    if (numMap[e.key]) { handleNum(e.key); highlightBtn(`[data-value="${e.key}"]`); }
+    else if (opKeyMap[e.key]) { handleOp(opKeyMap[e.key]); highlightBtn(`[data-value="${opKeyMap[e.key]}"]`); }
+    else if (e.key === 'Enter' || e.key === '=') { calculate(); highlightBtn('[data-action="equals"]'); }
+    else if (e.key === '.') { handleDecimal(); highlightBtn('[data-action="decimal"]'); }
+    else if (e.key === 'Backspace') {
+      if (!freshResult && current.length > 1) current = current.slice(0,-1);
+      else current = '0';
+      updateDisplay(current);
+    }
+    else if (e.key === 'Escape') { handleClear(); highlightBtn('[data-action="clear"]'); }
+    else if (e.key === '%') { handlePercent(); highlightBtn('[data-action="percent"]'); }
+  });
+
+  function highlightBtn(sel) {
+    const btn = document.querySelector(`#btn-grid ${sel}`);
+    if (!btn) return;
+    btn.classList.add('pressed');
+    setTimeout(() => btn.classList.remove('pressed'), 150);
+  }
+
+  // History toggle
+  histToggle.addEventListener('click', () => {
+    histToggle.classList.toggle('open');
+    histList.classList.toggle('open');
+  });
+
+  updateDisplay('0');
+</script>
+</body>
+</html>
